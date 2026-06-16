@@ -1,2 +1,4 @@
 manage.py
 spotify/
+__init__.py
+migrations/
