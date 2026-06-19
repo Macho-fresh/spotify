@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework.permissions import BasePermission, IsAuthenticated
-from accounts import User
-from rest_framework import generics
+from accounts.models import User
+from rest_framework import generics, status
 from .serializers import *
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -39,7 +39,7 @@ class SearchSongView(generics.ListAPIView):
     ]
 
     # filterset_fields = ['genre', 'rating']
-    search_fields = ['title']
+    search_fields = ['title', 'genre']
 
 class UploadAlbumView(generics.ListCreateAPIView):    
     serializer_class = AlbumSerializer
@@ -50,3 +50,21 @@ class CreatePlaylistView(generics.ListCreateAPIView):
     serializer_class = PlaylistSerializer
     permission_classes = [IsAuthenticated]
     queryset = Playlist.objects.all()
+
+class AddSongToPlaylistView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        song_id = int(request.query_params.get('song_id'))
+        playlist_id = int(request.query_params.get('playlist_id'))
+
+        playlist = Playlist.objects.get(id=playlist_id)
+        song = Song.objects.get(id=song_id)
+        playlist.objects.create(
+            title = playlist.title,
+            user = request.user,
+            songs = song
+        )
+
+        return Response({
+            'message': f'{song} added to {playlist}'
+        }, status=status.HTTP_201_CREATED)

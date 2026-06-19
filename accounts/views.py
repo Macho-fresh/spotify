@@ -6,42 +6,69 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import authenticate, login
 
-class RegisterView(APIView):
+class RegisterView(generics.GenericAPIView):
+    serializer_class = RegisterSerializer
     authentication_classes = []
     permission_classes = []
-    def get(self, request):
-        serializer = RegisterSerializer(data=request.data)
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
 
-        try:
-            user = User.objects.create_user(
-                username = serializer.validated_data['username'],
-                email = serializer.validated_data['email'],
-                password = serializer.validated_data['password']
+        
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-        except user.exists():
+        username = serializer.validated_data['username']
+        email = serializer.validated_data['email']
+        password = serializer.validated_data['password']
+        
+        if User.objects.filter(username=username).exists():
             return Response({
                 'error': 'User already exists'
             }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        user = User.objects.create_user(
+            username = username,
+            email = email,
+            password = password
+        )
 
-class LoginView(APIView):
+        return Response ({
+            'message': f'Welcome {user.username}'
+        })
+
+        
+
+class LoginView(generics.GenericAPIView):
+    serializer_class = LoginSerializer
+
     authentication_classes = []
     permission_classes = []
 
-    def get(self, request):
-        serializer = LoginSerializer(data=request.data)
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
         
-        username = serializer.validated_data['username'],
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        username = serializer.validated_data['username']
         password = serializer.validated_data['password']
 
-        try:
-            user = authenticate(request, username=username, password=password)
-        except user is None:
-            return Response({
-                'error': 'user does not exist'
-            })
+        user = authenticate(request, username=username, password=password)
+        
+        if user is None:
+            return Response(
+                {'error': 'Invalid username or password'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
         
         login(request, user)
-
-        
-            
+        return Response ({
+            'message': 'login successful'
+        }, status=status.HTTP_200_OK)
+       
