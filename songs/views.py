@@ -10,29 +10,38 @@ from rest_framework.filters import SearchFilter
 
 class IsArtist(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_artist and request.user.IsAuthenticated
+        return request.user.is_authenticated
     
 class UploadSongView(generics.ListCreateAPIView):
     serializer_class = SongSerializer
     permission_classes = [IsArtist]
     queryset = Song.objects.all()
 
-class ViewAllSongsView(APIView):
-    permission_classes = [IsAuthenticated]
+    def perform_create(self, serializer):
+        serializer.save(artist=self.request.user)
 
-    def get(self, request):
-        songs = Song.objects.all()
-        for i in songs:
-            return Response({
-                'artist': i.artist,
-                'title': i.title,
-                'cover_image': i.cover_image,
-                'audio': i.audio
-            })
+class ViewAllSongsView(generics.ListAPIView):
+    serializer_class = SongSerializer
+    permission_classes = [IsAuthenticated]
+    queryset=Song.objects.all()
+
+    # def get(self, request):
+    #     songs = Song.objects.all()
+    #     # return Response({
+    #     #     'songs': songs
+    #     # })
+    #     for i in songs:
+    #         return Response({
+    #             'artist': i.artist,
+    #             'title': i.title,
+    #             'cover_image': i.cover_image,
+    #             'audio': i.audio
+    #         })
 
 class SearchSongView(generics.ListAPIView):
     serializer_class = SongSerializer
     permission_classes = [IsAuthenticated]
+    queryset=Song.objects.all()
     filter_backends = [
         DjangoFilterBackend,
         SearchFilter
@@ -46,14 +55,19 @@ class UploadAlbumView(generics.ListCreateAPIView):
     permission_classes = [IsArtist]
     queryset = Album.objects.all()
 
+    def perform_create(self, serializer):
+        serializer.save(artist=self.request.user)
+
 class CreatePlaylistView(generics.ListCreateAPIView):    
     serializer_class = PlaylistSerializer
     permission_classes = [IsAuthenticated]
     queryset = Playlist.objects.all()
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 class AddSongToPlaylistView(APIView):
     permission_classes = [IsAuthenticated]
-    def post(self, request):
+    def get(self, request):
         song_id = int(request.query_params.get('song_id'))
         playlist_id = int(request.query_params.get('playlist_id'))
 
